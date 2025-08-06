@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>🧠 小智 MCP 控制中心</title>
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      color: white;
+      padding: 2rem;
+    }
+    #log {
+      height: 200px;
+      background: rgba(0,0,0,0.5);
+      padding: 1rem;
+      overflow-y: auto;
+      border-radius: 10px;
+      font-family: monospace;
+      margin-bottom: 1rem;
+    }
+    input, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+    }
+    button {
+      background-color: #00c9a7;
+      border: none;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 小智 MCP 控制中心</h1>
+  <div>狀態：<span id="status">尚未連線</span></div>
+  <pre id="log"></pre>
+  <input id="msg" type="text" placeholder='輸入 MCP 指令，例如 {"jsonrpc":"2.0","id":1,"method":"tools/list"}' />
+  <button onclick="send()">傳送</button>
+
+  <script>
+    const log = document.getElementById("log");
+    const status = document.getElementById("status");
+    const msg = document.getElementById("msg");
+
+    // ✅ 替換下列參數為你的設備資訊
+    const accessToken = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM1Nzg4MSwiYWdlbnRJZCI6NDA2Njc3LCJlbmRwb2ludElkIjoiYWdlbnRfNDA2Njc3IiwicHVycG9zZSI6Im1jcC1lbmRwb2ludCIsImlhdCI6MTc1NDQ1NDYwN30.kRScayd1iY5c1v6lofi43V6oRRXwa-lLoGwy3ubv_kpF0oFBXCUW-_rlzlMNVxMHctx33l2TDvGarjcwHE4XTw";
+    const deviceId = "30:ed:a0:bc:bb:a4";
+    const clientId = "177e399a-d701-4b7e-aa69-5261c1103d4d";
+
+    const wsUrl = `wss://api.xiaozhi.me/mcp/?token=${encodeURIComponent(accessToken)}`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      status.innerText = "已連線 ✅";
+      logMessage("✅ 成功連線至小智伺服器");
+    };
+
+    socket.onmessage = (e) => {
+      logMessage("📩 收到: " + e.data);
+    };
+
+    socket.onclose = () => {
+      status.innerText = "已斷線 ❌";
+      logMessage("⚠️ 與伺服器斷開連線");
+    };
+
+    function send() {
+      if (socket.readyState === WebSocket.OPEN) {
+        let payload = msg.value;
+        try {
+          const obj = JSON.parse(payload);
+          const wrapper = {
+            type: "mcp",
+            payload: obj
+          };
+          socket.send(JSON.stringify(wrapper));
+          logMessage("📤 發送: " + JSON.stringify(wrapper));
+        } catch (e) {
+          logMessage("❌ 請輸入正確的 JSON 格式: " + e.message);
+        }
+        msg.value = "";
+      } else {
+        logMessage("❌ 無法傳送，未連線");
+      }
+    }
+
+    function logMessage(text) {
+      log.textContent += text + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+  </script>
+</body>
+</html>
